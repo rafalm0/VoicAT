@@ -1,14 +1,22 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, HTTPException, Header, Depends
 from fastapi.responses import JSONResponse
 import torch
 import os
 import soundfile as sf
 import io
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+from API_key import API_KEY
 
 app = FastAPI()
 
-# Setup device
+
+# Dependency to verify API key
+def verify_api_key(x_api_key: str = Header(...)):
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid API Key")
+
+
+# Set up the model
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
@@ -33,8 +41,10 @@ asr_pipeline = pipeline(
 )
 
 @app.post("/transcribe")
-async def transcribe(file: UploadFile = File(...)):
-    # Read audio file into memory
+async def transcribe(
+        file: UploadFile = File(...),
+        api_key: None = Depends(verify_api_key)  # enforce API key
+):
     audio_bytes = await file.read()
     audio_data, sample_rate = sf.read(io.BytesIO(audio_bytes))
 

@@ -128,3 +128,7 @@ dmypy.json
 *.wav
 
 *.ogg
+
+API_key.py
+
+ngrok/
